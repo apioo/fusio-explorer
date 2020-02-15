@@ -1,0 +1,45 @@
+
+.fusio-container {
+}
+
+.fusio-navigation {
+  position:fixed;
+  float:left;
+  width:180px;
+  height:100%;
+  border-right:2px solid #666;
+  background-color:#eee;
+}
+
+.fusio-navigation ul {
+  list-style-type:none;
+  margin:0;
+  padding:0;
+}
+
+.fusio-navigation li {
+  margin:0;
+  padding:0;
+}
+
+.fusio-navigation button {
+  padding:8px;
+  width:178px;
+  text-align:left;
+}
+
+.fusio-navigation button:hover {
+  background-color:#ccc;
+}
+
+.fusio-navigation > p {
+  margin:0;
+  padding:8px;
+  background-color:#444;
+  color:#eee;
+  font-size:0.8em;
+}
+
+.fusio-grid {
+  margin-left:180px;
+}
