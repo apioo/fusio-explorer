@@ -8,6 +8,8 @@ import DataTable from 'react-data-table-component';
 import Modal from 'react-modal';
 import linkParse from 'parse-link-header';
 
+const FUSIO_URL = window.fusio_url;
+
 class App extends React.Component {
     constructor(props) {
         super(props);
@@ -15,15 +17,18 @@ class App extends React.Component {
         this.state = {
             title: '',
             path: '',
-            schema: null,
-            form: null,
+            // grid
+            columns: [],
             totalResults: 0,
             itemsPerPage: 10,
             startIndex: 0,
-            entry: {},
-            columns: [],
-            selected: null,
-            showModal: false
+            entry: [],
+            // modal
+            schema: null,
+            form: null,
+            selected: null, // the selected row
+            showModal: false,
+            error: null
         };
 
         this.onClick = this.onClick.bind(this);
@@ -38,39 +43,27 @@ class App extends React.Component {
 
     }
 
-    getColumns(result) {
-        let columns = [];
-        let entry = result.entry[0];
-
-        for (let key in entry) {
-            columns.push({
-                name: key,
-                selector: key
-            });
-        }
-
-        return columns;
-    }
-
     onClick(navigation) {
         this.getSchema(navigation.path).then(() => {
-            this.fetchData(navigation)
+            this.setState({
+                title: navigation.title,
+                path: navigation.path,
+            });
+
+            this.fetchData()
         });
     }
 
-    fetchData(navigation) {
-        fetch('http://127.0.0.1/projects/fusio/public/index.php/' + navigation.path + '?count=' + this.state.itemsPerPage + '&startIndex=' + this.state.startIndex)
+    fetchData() {
+        fetch(FUSIO_URL + this.state.path + '?count=' + this.state.itemsPerPage + '&startIndex=' + this.state.startIndex)
             .then(res => res.json())
             .then(
                 (result) => {
                     this.setState({
-                        title: navigation.title,
-                        path: navigation.path,
                         totalResults: result.totalResults,
                         itemsPerPage: result.itemsPerPage,
                         startIndex: result.startIndex,
-                        entry: result.entry,
-                        columns: this.getColumns(result)
+                        entry: result.entry
                     });
                 },
                 (error) => {
@@ -81,7 +74,7 @@ class App extends React.Component {
 
     async getSchema(path) {
         // discover schema
-        const optionsResponse = await fetch('http://127.0.0.1/projects/fusio/public/index.php/' + path, {
+        const optionsResponse = await fetch(FUSIO_URL + path, {
             method: 'OPTIONS'
         });
 
@@ -97,16 +90,39 @@ class App extends React.Component {
         const response = await fetch(schemaUrl);
         const data = await response.json();
 
+        // @TODO build columns based on JSON Schema
+
         this.setState({
             schema: data.schema,
-            form: data.form
+            form: data.form,
+            columns: this.buildColumnsFromJsonSchema(data.schema)
         });
+    }
+
+    buildColumnsFromJsonSchema(schema) {
+        let columns = [];
+
+        if (schema.properties) {
+            for (let key in schema.properties) {
+                let title = key;
+                if (schema.properties[key].title) {
+                    title = schema.properties[key].title;
+                }
+
+                columns.push({
+                    name: title,
+                    selector: key
+                });
+            }
+        }
+
+        return columns;
     }
 
     changePage(page, totalRows) {
         let startIndex = (page - 1) * this.state.itemsPerPage;
 
-        fetch('http://127.0.0.1/projects/fusio/public/index.php/' + this.state.path + '?count=' + this.state.itemsPerPage + '&startIndex=' + startIndex)
+        fetch(FUSIO_URL + this.state.path + '?count=' + this.state.itemsPerPage + '&startIndex=' + startIndex)
             .then(res => res.json())
             .then(
                 (result) => {
@@ -125,7 +141,7 @@ class App extends React.Component {
             itemsPerPage: currentRowsPerPage
         });
 
-        fetch('http://127.0.0.1/projects/fusio/public/index.php/' + this.state.path + '?count=' + currentRowsPerPage + '&startIndex=' + this.state.startIndex)
+        fetch(FUSIO_URL + this.state.path + '?count=' + currentRowsPerPage + '&startIndex=' + this.state.startIndex)
             .then(res => res.json())
             .then(
                 (result) => {
@@ -149,7 +165,7 @@ class App extends React.Component {
     addRecord() {
         this.setState({
             showModal: true,
-            selected: null
+            selected: {}
         });
     }
 
@@ -160,7 +176,39 @@ class App extends React.Component {
     }
 
     submitForm() {
+        let config = {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(this.state.selected)
+        };
 
+        fetch(FUSIO_URL + this.state.path, config)
+            .then(res => res.json())
+            .then(
+                (result) => {
+                    if (!result.success) {
+                        let error = 'The server responded with an error message';
+                        if (result.message) {
+                            error = result.message;
+                        }
+
+                        this.setState({
+                            error: error
+                        });
+                    } else {
+                        this.setState({
+                            showModal: false
+                        });
+
+                        this.fetchData()
+                    }
+                },
+                (error) => {
+                    // @TODO handle error
+                }
+            );
     }
 
     render() {
@@ -187,11 +235,21 @@ class App extends React.Component {
 
         let form;
         if (this.state.schema) {
+            let schema = this.state.schema;
+            if (schema['$schema']) {
+                delete schema['$schema'];
+            }
+
             if (this.state.form) {
                 form = <Form schema={this.state.schema} uiSchema={this.state.form} formData={this.state.selected} onSubmit={this.submitForm}/>
             } else {
                 form = <Form schema={this.state.schema} formData={this.state.selected} onSubmit={this.submitForm}/>
             }
+        }
+
+        let error;
+        if (this.state.error) {
+            error = <div className="alert alert-danger">{this.state.error}</div>
         }
 
         return (
@@ -213,6 +271,7 @@ class App extends React.Component {
                 </div>
                 <Modal isOpen={this.state.showModal} contentLabel="Add record">
                     <button onClick={this.closeModal} className="btn btn-secondary float-right">×</button>
+                    {error}
                     {form}
                 </Modal>
             </div>
