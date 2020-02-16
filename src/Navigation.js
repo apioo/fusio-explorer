@@ -1,5 +1,7 @@
 import React from 'react';
 
+const FUSIO_URL = window.fusio_url;
+
 class Navigation extends React.Component {
     constructor(props) {
         super(props);
@@ -50,7 +52,7 @@ class Navigation extends React.Component {
     }
     
     componentDidMount() {
-        fetch('http://127.0.0.1/projects/fusio/public/index.php/export/routes')
+        fetch(FUSIO_URL + '/export/routes')
             .then(res => res.json())
             .then(
                 (result) => {
