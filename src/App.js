@@ -4,6 +4,7 @@ import './App.css';
 import 'bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import Navigation from "./Navigation";
+import Login from "./Login";
 import DataTable from 'react-data-table-component';
 import Modal from 'react-modal';
 import linkParse from 'parse-link-header';
@@ -28,13 +29,18 @@ class App extends React.Component {
             form: null,
             selected: null, // the selected row
             showModal: false,
-            error: null
+            error: null,
+            // login
+            token: null,
+            showLogin: false
         };
 
         this.onClick = this.onClick.bind(this);
         this.addRecord = this.addRecord.bind(this);
         this.closeModal = this.closeModal.bind(this);
         this.submitForm = this.submitForm.bind(this);
+        this.showLogin = this.showLogin.bind(this);
+        this.onLogin = this.onLogin.bind(this);
 
         Modal.setAppElement('#root');
     }
@@ -179,7 +185,8 @@ class App extends React.Component {
         let config = {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + this.state.token
             },
             body: JSON.stringify(this.state.selected)
         };
@@ -211,7 +218,24 @@ class App extends React.Component {
             );
     }
 
+    showLogin() {
+        this.setState({
+            showLogin: true
+        })
+    }
+
+    onLogin(accessToken) {
+        this.setState({
+            token: accessToken,
+            showLogin: false
+        })
+    }
+    
     render() {
+        if (this.state.showLogin) {
+            return <Login onLogin={this.onLogin}/>
+        }
+
         let grid;
         if (this.state.path) {
             grid = <DataTable
@@ -252,6 +276,11 @@ class App extends React.Component {
             error = <div className="alert alert-danger">{this.state.error}</div>
         }
 
+        let login;
+        if (!this.state.authorized) {
+            login = <button className="btn btn-outline-info" type="button" onClick={this.showLogin}>Login</button>
+        }
+
         return (
             <div className="fusio-container">
                 <div className="fusio-navigation">
@@ -263,9 +292,8 @@ class App extends React.Component {
                         {this.state.title}
                         <div className="collapse navbar-collapse">
                         </div>
-                        <form className="form-inline">
-                            <button className="btn btn-outline-success" type="button" onClick={this.addRecord} disabled={!this.state.path}>Add</button>
-                        </form>
+                        {login}
+                        <button className="btn btn-outline-info" type="button" onClick={this.addRecord} disabled={!this.state.path}>Add</button>
                     </nav>
                     {grid}
                 </div>
