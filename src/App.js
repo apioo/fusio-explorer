@@ -39,14 +39,22 @@ class App extends React.Component {
         this.addRecord = this.addRecord.bind(this);
         this.closeModal = this.closeModal.bind(this);
         this.submitForm = this.submitForm.bind(this);
+        this.onError = this.onError.bind(this);
         this.showLogin = this.showLogin.bind(this);
+        this.closeLogin = this.closeLogin.bind(this);
         this.onLogin = this.onLogin.bind(this);
+        this.onLogout = this.onLogout.bind(this);
 
         Modal.setAppElement('#root');
     }
 
     componentDidMount() {
-
+        let token = window.localStorage.getItem('token');
+        if (token) {
+            this.setState({
+                token: token
+            });
+        }
     }
 
     onClick(navigation) {
@@ -181,17 +189,28 @@ class App extends React.Component {
         });
     }
 
-    submitForm() {
+    submitForm(data) {
+        let row = data.formData;
+        let url, method;
+
+        if (row && row.hasOwnProperty('id')) {
+            url = FUSIO_URL + this.state.path + '/' + row.id;
+            method = 'PUT';
+        } else {
+            url = FUSIO_URL + this.state.path;
+            method = 'POST';
+        }
+
         let config = {
-            method: 'POST',
+            method: method,
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': 'Bearer ' + this.state.token
             },
-            body: JSON.stringify(this.state.selected)
+            body: JSON.stringify(data.formData)
         };
 
-        fetch(FUSIO_URL + this.state.path, config)
+        fetch(url, config)
             .then(res => res.json())
             .then(
                 (result) => {
@@ -218,24 +237,45 @@ class App extends React.Component {
             );
     }
 
+    onError(errors) {
+        if (errors.length > 0) {
+            this.setState({
+                error: errors[0]
+            });
+        }
+    }
+
     showLogin() {
         this.setState({
             showLogin: true
         })
     }
 
+    closeLogin() {
+        this.setState({
+            showLogin: false
+        })
+    }
+
     onLogin(accessToken) {
+        window.localStorage.setItem('token', accessToken);
+
         this.setState({
             token: accessToken,
             showLogin: false
         })
     }
-    
-    render() {
-        if (this.state.showLogin) {
-            return <Login onLogin={this.onLogin}/>
-        }
 
+    onLogout() {
+        window.localStorage.removeItem('token');
+
+        this.setState({
+            token: null,
+            showLogin: false
+        })
+    }
+
+    render() {
         let grid;
         if (this.state.path) {
             grid = <DataTable
@@ -265,9 +305,9 @@ class App extends React.Component {
             }
 
             if (this.state.form) {
-                form = <Form schema={this.state.schema} uiSchema={this.state.form} formData={this.state.selected} onSubmit={this.submitForm}/>
+                form = <Form schema={this.state.schema} uiSchema={this.state.form} formData={this.state.selected} onSubmit={this.submitForm} onError={this.onError} />
             } else {
-                form = <Form schema={this.state.schema} formData={this.state.selected} onSubmit={this.submitForm}/>
+                form = <Form schema={this.state.schema} formData={this.state.selected} onSubmit={this.submitForm} onError={this.onError} />
             }
         }
 
@@ -277,8 +317,10 @@ class App extends React.Component {
         }
 
         let login;
-        if (!this.state.authorized) {
+        if (!this.state.token) {
             login = <button className="btn btn-outline-info" type="button" onClick={this.showLogin}>Login</button>
+        } else {
+            login = <button className="btn btn-outline-info" type="button" onClick={this.onLogout}>Logout</button>
         }
 
         return (
@@ -301,6 +343,10 @@ class App extends React.Component {
                     <button onClick={this.closeModal} className="btn btn-secondary float-right">×</button>
                     {error}
                     {form}
+                </Modal>
+                <Modal isOpen={this.state.showLogin} contentLabel="Login">
+                    <button onClick={this.closeLogin} className="btn btn-secondary float-right">×</button>
+                    <Login onLogin={this.onLogin} />
                 </Modal>
             </div>
         );
