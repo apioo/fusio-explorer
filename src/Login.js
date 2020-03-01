@@ -1,5 +1,4 @@
 import React from 'react';
-import {Fusio} from "fusio-sdk";
 
 const FUSIO_URL = window.fusio_url;
 
@@ -10,6 +9,7 @@ class Navigation extends React.Component {
         this.state = {
             username: '',
             password: '',
+            scopes: [],
             error: null
         };
 
@@ -26,7 +26,8 @@ class Navigation extends React.Component {
             },
             body: JSON.stringify({
                 username: this.state.username,
-                password: this.state.password
+                password: this.state.password,
+                scopes: this.state.scopes
             }),
         };
 
@@ -41,8 +42,6 @@ class Navigation extends React.Component {
                             error: result.message
                         })
                     }
-
-                    // window.localStorage.setItem("token", accessToken);
                 },
                 (error) => {
                     // @TODO handle error
@@ -62,6 +61,19 @@ class Navigation extends React.Component {
         });
     }
 
+    handleScopes(event) {
+        let scopes = event.target.value;
+        if (scopes) {
+            this.setState({
+                scopes: scopes.split(',')
+            });
+        } else {
+            this.setState({
+                scopes: []
+            });
+        }
+    }
+
     render() {
         let error;
         if (this.state.error) {
@@ -78,6 +90,10 @@ class Navigation extends React.Component {
                 <div className="form-group">
                     <label htmlFor="password">Password</label>
                     <input type="password" className="form-control" id="password" value={this.state.password} onChange={this.handlePassword} />
+                </div>
+                <div className="form-group">
+                    <label htmlFor="scopes">Scopes</label>
+                    <input type="text" className="form-control" id="scopes" value={this.state.scopes} onChange={this.handleScopes} />
                 </div>
                 <button onClick={this.onSubmit} className="btn btn-primary">Login</button>
             </div>
