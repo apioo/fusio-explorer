@@ -9,26 +9,33 @@ class Navigation extends React.Component {
         this.state = {
             username: '',
             password: '',
-            scopes: [],
+            scopes: '',
             error: null
         };
 
         this.onSubmit = this.onSubmit.bind(this);
         this.handleUsername = this.handleUsername.bind(this);
         this.handlePassword = this.handlePassword.bind(this);
+        this.handleScopes = this.handleScopes.bind(this);
     }
 
     onSubmit() {
+        let data = {
+            username: this.state.username,
+            password: this.state.password
+        };
+
+        let scopes = this.state.scopes;
+        if (scopes) {
+            data['scopes'] = scopes.split(',');
+        }
+
         let config = {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-                username: this.state.username,
-                password: this.state.password,
-                scopes: this.state.scopes
-            }),
+            body: JSON.stringify(data),
         };
 
         fetch(FUSIO_URL + '/consumer/login', config)
@@ -62,16 +69,9 @@ class Navigation extends React.Component {
     }
 
     handleScopes(event) {
-        let scopes = event.target.value;
-        if (scopes) {
-            this.setState({
-                scopes: scopes.split(',')
-            });
-        } else {
-            this.setState({
-                scopes: []
-            });
-        }
+        this.setState({
+            scopes: event.target.value
+        });
     }
 
     render() {
