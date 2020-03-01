@@ -69,7 +69,9 @@ class App extends React.Component {
     }
 
     fetchData() {
-        fetch(FUSIO_URL + this.state.path + '?count=' + this.state.itemsPerPage + '&startIndex=' + this.state.startIndex)
+        let config = this.getRequestConfig('GET');
+
+        fetch(FUSIO_URL + this.state.path + '?count=' + this.state.itemsPerPage + '&startIndex=' + this.state.startIndex, config)
             .then(res => res.json())
             .then(
                 (result) => {
@@ -134,9 +136,10 @@ class App extends React.Component {
     }
 
     changePage(page, totalRows) {
+        let config = this.getRequestConfig('GET');
         let startIndex = (page - 1) * this.state.itemsPerPage;
 
-        fetch(FUSIO_URL + this.state.path + '?count=' + this.state.itemsPerPage + '&startIndex=' + startIndex)
+        fetch(FUSIO_URL + this.state.path + '?count=' + this.state.itemsPerPage + '&startIndex=' + startIndex, config)
             .then(res => res.json())
             .then(
                 (result) => {
@@ -155,7 +158,9 @@ class App extends React.Component {
             itemsPerPage: currentRowsPerPage
         });
 
-        fetch(FUSIO_URL + this.state.path + '?count=' + currentRowsPerPage + '&startIndex=' + this.state.startIndex)
+        let config = this.getRequestConfig('GET');
+
+        fetch(FUSIO_URL + this.state.path + '?count=' + currentRowsPerPage + '&startIndex=' + this.state.startIndex, config)
             .then(res => res.json())
             .then(
                 (result) => {
@@ -201,14 +206,7 @@ class App extends React.Component {
             method = 'POST';
         }
 
-        let config = {
-            method: method,
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + this.state.token
-            },
-            body: JSON.stringify(data.formData)
-        };
+        let config = this.getRequestConfig(method, data.formData);
 
         fetch(url, config)
             .then(res => res.json())
@@ -235,6 +233,30 @@ class App extends React.Component {
                     // @TODO handle error
                 }
             );
+    }
+
+    getRequestConfig(method, data) {
+        let headers = [];
+        if (this.state.token) {
+            headers['Authorization'] = 'Bearer ' + this.state.token;
+        }
+
+        if (method === 'GET') {
+            headers['Accept'] = 'application/json';
+        } else {
+            headers['Content-Type'] = 'application/json';
+        }
+
+        let config = {
+            method: method,
+            headers: headers,
+        };
+
+        if (data) {
+            config['body'] = JSON.stringify(data);
+        }
+
+        return config;
     }
 
     onError(errors) {
